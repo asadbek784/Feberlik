@@ -1,99 +1,118 @@
 import logging
-import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    ReplyKeyboardMarkup, 
+    KeyboardButton, 
+    InlineKeyboardMarkup, 
+    InlineKeyboardButton, 
+    LabeledPrice, 
+    PreCheckoutQuery
+)
 
-# 1. BOT TOKENINI KIRITING (@BotFather dan olingan kod)
-API_TOKEN = 'SIZNING_TOKENINGIZNI_SHU_YERGA_YOZING'
+# --- SOZLAMALAR ---
+API_TOKEN = 'SIZNING_BOT_TOKENINGIZ' # @BotFather dan olingan
+PAYMENTS_TOKEN = 'SIZNING_PAYMENTS_TOKENINGIZ' # @BotFather -> Payments bo'limidan olingan
 
-# Loglarni sozlash
 logging.basicConfig(level=logging.INFO)
-
-# Bot va Dispatcher obyektlarini yaratish
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# --- KLAVIATURALAR (DIZAYN) ---
+# --- TUGMALAR (DIZAYN) ---
 
-# Asosiy Menyu
-def main_menu_keyboard():
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    buttons = [
-        KeyboardButton("🛍 Katalog"),
-        KeyboardButton("🎁 Aksiyalar"),
-        KeyboardButton("👤 Shaxsiy kabinet"),
-        KeyboardButton("✍️ Ro'yxatdan o'tish"),
-        KeyboardButton("📞 Bog'lanish")
-    ]
-    keyboard.add(*buttons)
-    return keyboard
+# Asosiy menyu
+main_menu = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+main_menu.add(
+    KeyboardButton("🛍 Katalog"), 
+    KeyboardButton("🎁 Aksiyalar")
+)
+main_menu.add(
+    KeyboardButton("👤 Shaxsiy kabinet"), 
+    KeyboardButton("✍️ Ro'yxatdan o'tish")
+)
+main_menu.add(KeyboardButton("📞 Bog'lanish"))
 
-# Mahsulot ostidagi tugmalar
-def product_inline_keyboard():
-    markup = InlineKeyboardMarkup(row_width=3)
-    markup.row(
-        InlineKeyboardButton("➖", callback_data="minus"),
-        InlineKeyboardButton("1", callback_data="count"),
-        InlineKeyboardButton("➕", callback_data="plus")
+# Mahsulot ostidagi inline tugmalar
+def get_product_keyboard():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton("💳 Sotib olish (45 000 so'm)", callback_data="buy_now"),
+        InlineKeyboardButton("🌟 Mahsulot tavsifi", callback_data="description")
     )
-    markup.add(InlineKeyboardButton("📥 Savatga qo'shish", callback_data="add_cart"))
-    markup.add(InlineKeyboardButton("🌟 Tavsifi", callback_data="desc"))
     return markup
 
-# --- BOT BUYRUQLARI ---
+# --- BOT FUNKSIYALARI ---
 
-# /start komandasi
+# Start komandasi
 @dp.message_handler(commands=['start'])
-async def start_command(message: types.Message):
-    welcome_msg = (
-        f"Assalomu alaykum, {message.from_user.first_name}! ✨\n"
-        f"**Faberlic Go'zallik Botiga** xush kelibsiz!\n\n"
-        f"Siz bu yerda kataloglarni ko'rishingiz va "
-        f"mahsulotlarni osongina buyurtma qilishingiz mumkin."
+async def start_cmd(message: types.Message):
+    welcome_text = (
+        f"Assalomu alaykum, {message.from_user.first_name}! ✨\n\n"
+        "**Faberlic Go'zallik Olami** botiga xush kelibsiz!\n"
+        "Siz bu yerda eng sara kosmetika va parvarish vositalarini "
+        "to'g'ridan-to'g'ri buyurtma qilishingiz mumkin."
     )
-    # Botga rasm qo'shish (ixtiyoriy)
-    await message.answer(welcome_msg, reply_markup=main_menu_keyboard(), parse_mode="Markdown")
+    await message.answer(welcome_text, reply_markup=main_menu, parse_mode="Markdown")
 
 # Katalog bo'limi
-@dp.message_handler(lambda message: message.text == "🛍 Katalog")
+@dp.message_handler(lambda m: m.text == "🛍 Katalog")
 async def show_catalog(message: types.Message):
-    product_text = (
+    caption = (
         "💄 **Faberlic 'Velvet Lip' Pomada**\n\n"
-        "✨ **Turi:** Lab bo'yog'i\n"
-        "💰 **Narxi:** 45 000 so'm\n"
-        "🆔 **Artikul:** 1234\n\n"
-        "Sifatli va uzoq muddat saqlanib qoluvchi ranglar!"
+        "✨ Turi: Lab bo'yog'i\n"
+        "💰 Narxi: 45 000 so'm\n"
+        "🆔 Artikul: 1234\n\n"
+        "Sifatli va uzoq muddat saqlanuvchi ranglar!"
     )
-    # Namuna uchun rasm (Internetdagi rasm manzili yoki fayl ID si)
     photo_url = "https://images.uzum.uz/cl92mdfennt1ce4db9n0/original.jpg"
-    
     await bot.send_photo(
-        chat_id=message.chat.id,
-        photo=photo_url,
-        caption=product_text,
-        reply_markup=product_inline_keyboard(),
+        message.chat.id, 
+        photo=photo_url, 
+        caption=caption, 
+        reply_markup=get_product_keyboard(),
         parse_mode="Markdown"
     )
 
+# To'lov jarayonini boshlash
+@dp.callback_query_handler(lambda c: c.data == "buy_now")
+async def checkout(callback_query: types.CallbackQuery):
+    await bot.answer_callback_query(callback_query.id)
+    await bot.send_invoice(
+        chat_id=callback_query.from_user.id,
+        title="Faberlic Velvet Lip",
+        description="To'lovni amalga oshirish uchun pastdagi tugmani bosing.",
+        payload="payload_lip_123",
+        provider_token=PAYMENTS_TOKEN,
+        currency="UZS",
+        prices=[LabeledPrice(label="Pomada", amount=4500000)], # Tiyinlarda
+        start_parameter="faberlic-order"
+    )
+
+# To'lovdan oldingi tekshiruv
+@dp.pre_checkout_query_handler(lambda q: True)
+async def checkout_check(pre_checkout_query: PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+# Muvaffaqiyatli to'lov xabari
+@dp.message_handler(content_types=types.ContentTypes.SUCCESSFUL_PAYMENT)
+async def pay_success(message: types.Message):
+    await message.answer(
+        "To'lovingiz muvaffaqiyatli qabul qilindi! ✅\n"
+        "Buyurtmangiz tayyorlanmoqda. Rahmat!"
+    )
+
 # Bog'lanish bo'limi
-@dp.message_handler(lambda message: message.text == "📞 Bog'lanish")
+@dp.message_handler(lambda m: m.text == "📞 Bog'lanish")
 async def contact(message: types.Message):
-    contact_info = (
+    text = (
         "❓ **Savollaringiz bormi?**\n\n"
         "Biz bilan bog'laning:\n"
-        "👨‍💻 Admin: @SizningProfilingiz\n"
-        "📞 Tel: +998 90 123 45 67\n"
-        "📍 Manzil: Toshkent sh., Chilonzor tumani"
+        "👨‍💻 Admin: @Admin_User\n"
+        "📞 Tel: +998 90 123 45 67"
     )
-    await message.answer(contact_info)
+    await message.answer(text, parse_mode="Markdown")
 
-# Inline tugmalar uchun funksiya (tugma bosilganda bildirishnoma chiqarish)
-@dp.callback_query_handler(lambda c: c.data == 'add_cart')
-async def process_callback_button(callback_query: types.CallbackQuery):
-    await bot.answer_callback_query(callback_query.id, text="Savatchaga qo'shildi! ✅", show_alert=True)
-
-# --- BOTNI ISHGA TUSHIRISH ---
+# --- ISHGA TUSHIRISH ---
 if __name__ == '__main__':
-    print("Bot muvaffaqiyatli ishga tushdi...")
+    print("Bot Render serverida ishga tushishga tayyor...")
     executor.start_polling(dp, skip_updates=True)
