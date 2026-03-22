@@ -1,2 +1,5 @@
 aiogram==2.25.1
-worker: python bot.py
+flask
+gunicorn
+web: gunicorn bot:app & python bot.py
+
