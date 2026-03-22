@@ -1,4 +1,5 @@
-aiogram
+
+python-dotenvaiogram
 requests
 flask
 python-dotenv
