@@ -1,7 +1,5 @@
-
-python-dotenvaiogram
+aiogram
+python-dotenv
 requests
 flask
-python-dotenv
-
 
