@@ -22,8 +22,8 @@ def keep_alive():
     t.start()
 
 # --- BOT SOZLAMALARI ---
-API_TOKEN = 'SIZNING_BOT_TOKENINGIZ' # @BotFather dan olingan
-PAY_TOKEN = 'SIZNING_PAY_TOKENINGIZ' # To'lov uchun (ixtiyoriy)
+API_TOKEN = 'BOT_TOKEN_BU_YERDA' # @BotFather dan olingan
+PAY_TOKEN = 'BOT_TOKEN_BU_YERDA' # To'lov uchun (ixtiyoriy)
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
